@@ -37,7 +37,10 @@ export default async function handler(req: any, res: any) {
       email TEXT UNIQUE,
       role TEXT,
       avatar TEXT,
-      password TEXT
+      password TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_login TIMESTAMP
     )`;
 
     await sql`CREATE TABLE IF NOT EXISTS audit_logs (
@@ -82,9 +85,9 @@ export default async function handler(req: any, res: any) {
     
     if (count === 0) {
       // Mock Users
-      await sql`INSERT INTO users (id, name, email, role, avatar, password) VALUES 
-        ('1', 'Administrator', 'admin@sss.com', 'Admin', 'https://picsum.photos/id/64/100/100', 'admin'),
-        ('2', 'Fauzan Rizqy Kanz', 'fauzan.rizqy@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting')
+      await sql`INSERT INTO users (id, name, email, role, avatar, password, status) VALUES 
+        ('1', 'Administrator', 'admin@sss.com', 'Admin', 'https://picsum.photos/id/64/100/100', 'admin', 'active'),
+        ('2', 'Fauzan Rizqy Kanz', 'fauzan.rizqy@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active')
         ON CONFLICT (id) DO NOTHING`;
 
       // Settings

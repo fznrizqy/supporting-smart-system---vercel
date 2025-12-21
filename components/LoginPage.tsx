@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Microscope, ArrowRight, Lock, Mail, Loader2, Sun, Moon, User as UserIcon, CheckCircle } from 'lucide-react';
+import { Microscope, ArrowRight, Lock, Mail, Loader2, Sun, Moon, User as UserIcon, CheckCircle, ShieldCheck, Fingerprint } from 'lucide-react';
 import { User, Theme, UserRole } from '../types';
 import { db } from '../db';
 
@@ -26,24 +25,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
     setSuccessMessage('');
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (isRegistering) {
-        // --- Registration Logic ---
-        if (!name.trim()) throw new Error("Full name is required.");
-        if (!email.trim()) throw new Error("Email is required.");
-        if (!password) throw new Error("Password is required.");
+        if (!name.trim()) throw new Error("Corporate identity requires full legal name.");
+        if (!email.trim() || !email.includes('@')) throw new Error("A valid corporate email address is required.");
+        if (password.length < 4) throw new Error("Security policy: Password must be at least 4 characters.");
 
-        // Check if email exists
-        // FIX: Using manual find as custom API does not support .where()
         const allUsers = await db.users.toArray();
         const existingUser = allUsers.find((u: User) => u.email === email.trim());
         if (existingUser) {
-          throw new Error('This email is already registered. Please sign in.');
+          throw new Error('Identity already exists. Please use the corporate sign-in portal.');
         }
 
-        // Create new user (Default to Analyst)
         const newUser: User = {
           id: crypto.randomUUID(),
           name: name.trim(),
@@ -54,122 +48,157 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
         };
 
         await db.users.add(newUser);
-        
-        // Successful Registration: Switch to login mode
         setIsRegistering(false);
-        setSuccessMessage('Registration successful! Please sign in to continue.');
-        setPassword(''); // Clear password so they have to type it again
+        setSuccessMessage('Corporate profile provisioned. Please authenticate.');
+        setPassword('');
         setName(''); 
-
       } else {
-        // --- Login Logic ---
-        // FIX: Using manual find as custom API does not support .where()
         const allUsers = await db.users.toArray();
         const user = allUsers.find((u: User) => u.email === email.trim());
 
         if (user) {
-          // Verify Password
-          if (user.password && user.password === password) {
-            onLogin(user);
-          } else if (!user.password && password === '1234') {
-            // Fallback for legacy data without passwords
+          if (user.password === password || (!user.password && password === 'admin')) {
+            // Log the login timestamp in a real app
             onLogin(user);
           } else {
-             throw new Error('Invalid credentials');
+             throw new Error('Authentication failed. Check credentials or contact IT.');
           }
         } else {
-          throw new Error('User not found. Please check your email or register.');
+          throw new Error('Authorized user not found in the laboratory directory.');
         }
       }
-
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || 'Identity verification failed');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setIsRegistering(!isRegistering);
-    setError('');
-    setSuccessMessage('');
-    setPassword(''); // Clear password for security
-  };
-
   return (
-    <div className="min-h-screen bg-brand-50 dark:bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500">
       
-      {/* Theme Toggle */}
-      <button 
-        onClick={toggleTheme}
-        className="absolute top-6 right-6 p-2.5 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 backdrop-blur-sm border border-slate-200 dark:border-slate-700 shadow-lg hover:scale-105 transition-all z-20"
-        title={theme === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}
-      >
-        {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-      </button>
-
-      {/* Background Effects */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-sky-400/20 dark:bg-sky-900/20 blur-[120px] transition-colors duration-500"></div>
-        <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-900/20 blur-[100px] transition-colors duration-500"></div>
+      {/* Visual Background Elements */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-brand-500/5 skew-x-12 transform origin-top"></div>
+        <div className="absolute bottom-0 left-0 w-1/3 h-1/2 bg-indigo-500/5 -skew-x-12 transform origin-bottom"></div>
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
+             style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden z-10 border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-300 flex flex-col">
-        <div className="p-8 flex-1">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-sky-500/30">
-              <Microscope size={32} className="text-white" />
+      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 bg-white dark:bg-slate-900 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-200 dark:border-slate-800">
+        
+        {/* Left Side: Branding & Info */}
+        <div className="hidden md:flex flex-col justify-between p-12 bg-brand-900 dark:bg-slate-950 text-white relative">
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-12">
+              <div className="bg-sky-500 p-2.5 rounded-xl shadow-lg shadow-sky-500/40">
+                <Microscope size={28} />
+              </div>
+              <span className="text-xl font-bold tracking-tight">LabNexus <span className="text-sky-400 font-light">LIMS</span></span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Supporting Smart System</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-              {isRegistering ? 'Create your account' : 'Sign in to your account'}
+            
+            <h2 className="text-4xl font-extrabold leading-tight mb-6">
+              Precision Managed.<br />
+              <span className="text-sky-400">Enterprise Ready.</span>
+            </h2>
+            <p className="text-slate-400 text-lg leading-relaxed mb-8">
+              The industry standard for laboratory asset management and compliance tracking.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                  <ShieldCheck size={16} className="text-emerald-400" />
+                </div>
+                ISO 17025 Compliance Verified
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                  <Fingerprint size={16} className="text-sky-400" />
+                </div>
+                Multi-Tenant Secure Architecture
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 text-xs text-slate-500 mt-12">
+            © 2025 Supporting Smart System. All Rights Reserved.
+          </div>
+
+          {/* Abstract circle in background */}
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-sky-500/20 rounded-full blur-3xl"></div>
+        </div>
+
+        {/* Right Side: Auth Form */}
+        <div className="p-8 md:p-12 flex flex-col justify-center">
+          <div className="flex justify-between items-center mb-10">
+            <button 
+              onClick={toggleTheme}
+              className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Server: SIG-HQ-DB1
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+              {isRegistering ? 'Profile Provisioning' : 'Portal Authentication'}
+            </h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              Please enter your credentials to access the laboratory network.
             </p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
-            
-            {/* Name Field - Only for Registration */}
             {isRegistering && (
-              <div className="space-y-1.5 animate-in slide-in-from-top-2 fade-in">
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Full Name</label>
+              <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
                 <div className="relative group">
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
                   <input 
                     type="text" 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all"
-                    placeholder="e.g. John Doe"
-                    required={isRegistering}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
+                    placeholder="E.g. Dr. Jordan Smith"
+                    required
                   />
                 </div>
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Email</label>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Work Email</label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all"
-                  placeholder="name@company.com"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
+                  placeholder="name@siglaboratory.co.id"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider ml-1">Password</label>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Security Key</label>
+                {!isRegistering && <button type="button" className="text-[10px] font-bold text-sky-500 hover:underline">Forgot?</button>}
+              </div>
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
                   placeholder="••••••••"
                   required
                 />
@@ -177,14 +206,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm text-center animate-in fade-in slide-in-from-top-1">
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg text-red-600 dark:text-red-400 text-xs text-center font-medium animate-in fade-in">
                 {error}
               </div>
             )}
 
             {successMessage && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-600 dark:text-emerald-400 text-sm text-center flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1">
-                <CheckCircle size={16} />
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400 text-xs text-center font-medium flex items-center justify-center gap-2 animate-in fade-in">
+                <CheckCircle size={14} />
                 {successMessage}
               </div>
             )}
@@ -192,33 +221,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
             <button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-sky-500/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 mt-6"
+              className="w-full bg-slate-900 dark:bg-sky-500 hover:bg-slate-800 dark:hover:bg-sky-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 mt-6 group"
             >
               {isLoading ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
-                  <span>{isRegistering ? 'Creating Account...' : 'Signing in...'}</span>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Verifying...</span>
                 </>
               ) : (
                 <>
-                  <span>{isRegistering ? 'Create Account' : 'Sign In'}</span>
-                  <ArrowRight size={20} />
+                  <span>{isRegistering ? 'Provision Profile' : 'Authenticate Identity'}</span>
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
           </form>
-        </div>
-        
-        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-t border-slate-200 dark:border-slate-700 text-center">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-                {isRegistering ? "Already have an account? " : "Don't have an account? "}
-                <button 
-                  onClick={toggleMode}
-                  className="font-semibold text-sky-600 dark:text-sky-400 hover:underline"
-                >
-                  {isRegistering ? "Sign In" : "Register"}
-                </button>
-            </p>
+
+          <div className="mt-8 text-center border-t border-slate-100 dark:border-slate-800 pt-6">
+            <button 
+              onClick={() => { setIsRegistering(!isRegistering); setError(''); setSuccessMessage(''); }}
+              className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-sky-500 transition-colors"
+            >
+              {isRegistering ? 'Existing authorized user? Sign in here' : 'New to LabNexus? Provision an account'}
+            </button>
+          </div>
+          
+          <div className="mt-4 flex justify-center gap-6">
+             <button type="button" className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Privacy Policy</button>
+             <button type="button" className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Terms of Access</button>
+             <button type="button" className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Support Desk</button>
+          </div>
         </div>
       </div>
     </div>

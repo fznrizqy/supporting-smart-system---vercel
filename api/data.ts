@@ -64,8 +64,8 @@ export default async function handler(req: any, res: any) {
         return res.status(201).json({ data: { id: rows[0].id } });
       }
       if (table === 'users') {
-        await sql`INSERT INTO users (id, name, email, role, avatar, password)
-                 VALUES (${body.id}, ${body.name}, ${body.email}, ${body.role}, ${body.avatar}, ${body.password})`;
+        await sql`INSERT INTO users (id, name, email, role, avatar, password, status)
+                 VALUES (${body.id}, ${body.name}, ${body.email}, ${body.role}, ${body.avatar}, ${body.password}, 'active')`;
         return res.status(201).json({ success: true, data: { success: true } });
       }
     }
@@ -104,9 +104,9 @@ export default async function handler(req: any, res: any) {
       const body = getParsedBody();
       if (table === 'users') {
         if (body.password) {
-          await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar}, password = ${body.password} WHERE id = ${id}`;
+          await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar}, password = ${body.password}, status = ${body.status || 'active'} WHERE id = ${id}`;
         } else {
-          await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar} WHERE id = ${id}`;
+          await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar}, status = ${body.status || 'active'} WHERE id = ${id}`;
         }
         return res.status(200).json({ success: true, data: { success: true } });
       }
