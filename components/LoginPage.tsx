@@ -225,7 +225,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
                 </>
               ) : (
                 <>
-                  <span>{isRegistering ? 'Provision Profile' : 'Sign In'}</span>
+                  <span>{isRegistering ? 'Register' : 'Sign In'}</span>
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
