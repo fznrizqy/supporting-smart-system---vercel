@@ -35,7 +35,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
         const allUsers = await db.users.toArray();
         const existingUser = allUsers.find((u: User) => u.email === email.trim());
         if (existingUser) {
-          throw new Error('Identity already exists. Please use the corporate sign-in portal.');
+          throw new Error('Identity already exists. Please Sign-in.');
         }
 
         const newUser: User = {
@@ -95,15 +95,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
               <div className="bg-sky-500 p-2.5 rounded-xl shadow-lg shadow-sky-500/40">
                 <Microscope size={28} />
               </div>
-              <span className="text-xl font-bold tracking-tight">LabNexus <span className="text-sky-400 font-light">LIMS</span></span>
+              <span className="text-xl font-bold tracking-tight">Supporting Smart System <span className="text-sky-400 font-light">App</span></span>
             </div>
             
             <h2 className="text-4xl font-extrabold leading-tight mb-6">
-              Precision Managed.<br />
-              <span className="text-sky-400">Enterprise Ready.</span>
+              All-in-one.<br />
+              <span className="text-sky-400">Smart App.</span>
             </h2>
             <p className="text-slate-400 text-lg leading-relaxed mb-8">
-              The industry standard for laboratory asset management and compliance tracking.
+              Organizing made better.
             </p>
 
             <div className="space-y-4">
@@ -111,13 +111,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
                   <ShieldCheck size={16} className="text-emerald-400" />
                 </div>
-                ISO 17025 Compliance Verified
+                Secure and Reliable
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
                   <Fingerprint size={16} className="text-sky-400" />
                 </div>
-                Multi-Tenant Secure Architecture
+                Multi-User ready
               </div>
             </div>
           </div>
@@ -139,18 +139,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Server: SIG-HQ-DB1
-            </div>
           </div>
 
           <div className="mb-8">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-              {isRegistering ? 'Profile Provisioning' : 'Portal Authentication'}
+              {isRegistering ? 'Register User' : 'User Sign-in'}
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Please enter your credentials to access the laboratory network.
+              Please enter your credentials to access the app.
             </p>
           </div>
 
@@ -173,7 +169,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Work Email</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email</label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
                 <input 
@@ -189,8 +185,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
 
             <div className="space-y-1">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Security Key</label>
-                {!isRegistering && <button type="button" className="text-[10px] font-bold text-sky-500 hover:underline">Forgot?</button>}
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
               </div>
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
@@ -230,7 +225,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
                 </>
               ) : (
                 <>
-                  <span>{isRegistering ? 'Provision Profile' : 'Authenticate Identity'}</span>
+                  <span>{isRegistering ? 'Provision Profile' : 'Sign In'}</span>
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -242,14 +237,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, theme, toggleTheme }) =>
               onClick={() => { setIsRegistering(!isRegistering); setError(''); setSuccessMessage(''); }}
               className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-sky-500 transition-colors"
             >
-              {isRegistering ? 'Existing authorized user? Sign in here' : 'New to LabNexus? Provision an account'}
+              {isRegistering ? 'Click here to Sign-in' : 'Click here to Register'}
             </button>
-          </div>
-          
-          <div className="mt-4 flex justify-center gap-6">
-             <button type="button" className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Privacy Policy</button>
-             <button type="button" className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Terms of Access</button>
-             <button type="button" className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Support Desk</button>
           </div>
         </div>
       </div>
