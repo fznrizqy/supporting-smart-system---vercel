@@ -1,4 +1,6 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL!);
 
 export default async function handler(req: any, res: any) {
   try {
@@ -79,23 +81,21 @@ export default async function handler(req: any, res: any) {
       values JSONB
     )`;
 
-    // Seed Data if Equipment is empty
-    const eqCountResult = await sql`SELECT count(*) FROM equipment`;
-    const count = parseInt(eqCountResult.rows[0].count);
+    // Seed Data
+    const rows = await sql`SELECT count(*) FROM equipment`;
+    const count = parseInt(rows[0].count);
     
     if (count === 0) {
-      // Mock Users
       await sql`INSERT INTO users (id, name, email, role, avatar, password, status) VALUES 
         ('1', 'Administrator', 'admin@sss.com', 'Admin', 'https://picsum.photos/id/64/100/100', 'admin', 'active'),
         ('2', 'Fauzan Rizqy Kanz', 'fauzan.rizqy@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active')
         ON CONFLICT (id) DO NOTHING`;
 
-      // Settings
       await sql`INSERT INTO settings (id, values) VALUES ('categories', '["HPLC", "LC-MS", "GC-MS", "Spectrophotometer", "pH Meter", "Centrifuge", "Analytical Balance", "Fume Hood", "Micropipette", "Ultrasonic"]')
                 ON CONFLICT (id) DO NOTHING`;
     }
 
-    return res.status(200).json({ data: { success: true, message: 'Database Ready' } });
+    return res.status(200).json({ data: { success: true, message: 'Neon Database Ready' } });
   } catch (error: any) {
     console.error('INIT ERROR:', error);
     return res.status(500).json({ error: error.message });
