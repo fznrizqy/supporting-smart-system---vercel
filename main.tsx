@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './index.css'; // Optional: if you have global styles, otherwise safe to omit or keep if exists
 
 // Ensure we find the root element
 const rootElement = document.getElementById('root');
