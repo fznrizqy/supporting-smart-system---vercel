@@ -37,6 +37,10 @@ export default async function handler(req: any, res: any) {
         const rows = await sql`SELECT * FROM events ORDER BY start_date ASC`;
         return res.status(200).json({ data: rows.map(mapEvent) });
       }
+      if (table === 'job_requests') {
+        const rows = await sql`SELECT * FROM job_requests ORDER BY requested_at DESC`;
+        return res.status(200).json({ data: rows.map(mapJobRequest) });
+      }
       if (table === 'settings') {
         const rows = await sql`SELECT * FROM settings WHERE id = ${id}`;
         return res.status(200).json({ data: rows[0] || null });
@@ -70,6 +74,11 @@ export default async function handler(req: any, res: any) {
                  VALUES (${body.id}, ${body.name}, ${body.email}, ${body.role}, ${body.avatar}, ${body.password}, 'active')`;
         return res.status(201).json({ data: { success: true } });
       }
+      if (table === 'job_requests') {
+        const rows = await sql`INSERT INTO job_requests (title, requestor_id, requestor_name, division, description, category, requested_at, start_date, due_date, assigned_to_id, status)
+                 VALUES (${body.title}, ${body.requestorId}, ${body.requestorName}, ${body.division}, ${body.description}, ${body.category}, ${body.requestedAt}, ${body.startDate}, ${body.dueDate}, ${body.assignedToId}, ${body.status}) RETURNING id`;
+        return res.status(201).json({ data: { id: rows[0].id } });
+      }
     }
 
     if (req.method === 'PUT') {
@@ -100,6 +109,19 @@ export default async function handler(req: any, res: any) {
         }
         return res.status(200).json({ data: { success: true } });
       }
+      if (table === 'job_requests') {
+        await sql`UPDATE job_requests SET 
+            title = ${body.title}, 
+            division = ${body.division}, 
+            description = ${body.description}, 
+            category = ${body.category}, 
+            start_date = ${body.startDate}, 
+            due_date = ${body.dueDate}, 
+            assigned_to_id = ${body.assignedToId}, 
+            status = ${body.status}
+            WHERE id = ${body.id}`;
+        return res.status(200).json({ data: { success: true } });
+      }
     }
 
     if (req.method === 'PATCH') {
@@ -116,6 +138,10 @@ export default async function handler(req: any, res: any) {
         await sql`UPDATE notifications SET is_read = ${body.isRead} WHERE id = ${id}`;
         return res.status(200).json({ data: { success: true } });
       }
+      if (table === 'job_requests') {
+        await sql`UPDATE job_requests SET status = ${body.status} WHERE id = ${id}`;
+        return res.status(200).json({ data: { success: true } });
+      }
     }
 
     if (req.method === 'DELETE') {
@@ -123,6 +149,7 @@ export default async function handler(req: any, res: any) {
       if (table === 'users') await sql`DELETE FROM users WHERE id = ${id}`;
       if (table === 'events') await sql`DELETE FROM events WHERE id = ${id}`;
       if (table === 'notifications') await sql`DELETE FROM notifications WHERE id = ${id}`;
+      if (table === 'job_requests') await sql`DELETE FROM job_requests WHERE id = ${id}`;
       return res.status(200).json({ data: { success: true } });
     }
 
@@ -186,5 +213,22 @@ function mapEvent(row: any) {
     type: row.type,
     equipmentId: row.equipment_id,
     createdBy: row.created_by
+  };
+}
+
+function mapJobRequest(row: any) {
+  return {
+    id: row.id,
+    title: row.title,
+    requestorId: row.requestor_id,
+    requestorName: row.requestor_name,
+    division: row.division,
+    description: row.description,
+    category: row.category,
+    requestedAt: row.requested_at,
+    startDate: row.start_date,
+    dueDate: row.due_date,
+    assignedToId: row.assigned_to_id,
+    status: row.status
   };
 }

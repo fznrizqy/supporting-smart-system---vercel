@@ -1,4 +1,5 @@
-import { Equipment, User, AuditLog, Notification, CalendarEvent } from './types';
+
+import { Equipment, User, AuditLog, Notification, CalendarEvent, JobRequest } from './types';
 
 // Utility for handling fetch responses safely
 const handleResponse = async (res: Response) => {
@@ -157,6 +158,44 @@ export const db = {
     },
     delete: async (id: number) => {
       const res = await fetch(`/api/data?table=events&id=${id}`, {
+        method: 'DELETE'
+      });
+      return handleResponse(res);
+    }
+  },
+
+  // Job Requests
+  jobRequests: {
+    toArray: async () => {
+      const res = await fetch('/api/data?table=job_requests');
+      return handleResponse(res);
+    },
+    add: async (req: JobRequest) => {
+      const res = await fetch('/api/data?table=job_requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req)
+      });
+      return handleResponse(res);
+    },
+    put: async (req: JobRequest) => {
+      const res = await fetch('/api/data?table=job_requests', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req)
+      });
+      return handleResponse(res);
+    },
+    updateStatus: async (id: number, status: string) => {
+      const res = await fetch(`/api/data?table=job_requests&id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      return handleResponse(res);
+    },
+    delete: async (id: number) => {
+      const res = await fetch(`/api/data?table=job_requests&id=${id}`, {
         method: 'DELETE'
       });
       return handleResponse(res);

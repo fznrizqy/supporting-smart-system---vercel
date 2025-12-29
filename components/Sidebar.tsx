@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { LayoutDashboard, Database, Shield, Microscope, ChevronLeft, Menu, History, Calendar } from 'lucide-react';
+import { LayoutDashboard, Database, Shield, Microscope, ChevronLeft, Menu, History, Calendar, ClipboardList } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -14,6 +15,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeTab, setActi
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'job-request', label: 'Job Request', icon: ClipboardList },
     { id: 'equipment', label: 'Equipment', icon: Database },
   ];
 

@@ -13,6 +13,7 @@ export default async function handler(req: any, res: any) {
       await sql`DROP TABLE IF EXISTS notifications CASCADE`;
       await sql`DROP TABLE IF EXISTS events CASCADE`;
       await sql`DROP TABLE IF EXISTS settings CASCADE`;
+      await sql`DROP TABLE IF EXISTS job_requests CASCADE`;
     }
 
     // Create Tables
@@ -81,6 +82,21 @@ export default async function handler(req: any, res: any) {
       values JSONB
     )`;
 
+    await sql`CREATE TABLE IF NOT EXISTS job_requests (
+      id SERIAL PRIMARY KEY,
+      title TEXT,
+      requestor_id TEXT,
+      requestor_name TEXT,
+      division TEXT,
+      description TEXT,
+      category TEXT,
+      requested_at TEXT,
+      start_date TEXT,
+      due_date TEXT,
+      assigned_to_id TEXT,
+      status TEXT
+    )`;
+
     // Seed Data
     const rows = await sql`SELECT count(*) FROM equipment`;
     const count = parseInt(rows[0].count);
@@ -88,7 +104,9 @@ export default async function handler(req: any, res: any) {
     if (count === 0) {
       await sql`INSERT INTO users (id, name, email, role, avatar, password, status) VALUES 
         ('1', 'Administrator', 'admin@sss.com', 'Admin', 'https://picsum.photos/id/64/100/100', 'admin', 'active'),
-        ('2', 'Fauzan Rizqy Kanz', 'fauzan.rizqy@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active')
+        ('2', 'Fauzan Rizqy Kanz', 'fauzan.rizqy@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active'),
+        ('3', 'Muhammad Luthfi Alfiyansyah', 'luthfialfiyansyah@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active'),
+        ('4', 'Rizqi Utomo', 'tomo@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active')
         ON CONFLICT (id) DO NOTHING`;
 
       await sql`INSERT INTO settings (id, values) VALUES ('categories', '["HPLC", "LC-MS", "GC-MS", "Spectrophotometer", "pH Meter", "Centrifuge", "Analytical Balance", "Fume Hood", "Micropipette", "Ultrasonic"]')

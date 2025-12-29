@@ -111,3 +111,33 @@ export interface CalendarEvent {
   equipmentId?: string; // Optional link to specific equipment
   createdBy: string;
 }
+
+// --- Job Request Types ---
+
+export enum JobRequestStatus {
+  Requests = 'Requests',
+  OnProgress = 'On Progress',
+  Finished = 'Finished',
+  Rejected = 'Rejected'
+}
+
+export enum JobCategory {
+  Maintenance = 'Maintenance',
+  Troubleshooting = 'Troubleshooting',
+  Documents = 'Documents'
+}
+
+export interface JobRequest {
+  id?: number;
+  title: string;
+  requestorId: string;
+  requestorName: string;
+  division: string;
+  description: string;
+  category?: JobCategory;
+  requestedAt: string;
+  startDate: string;
+  dueDate: string;
+  assignedToId: string;
+  status: JobRequestStatus;
+}
