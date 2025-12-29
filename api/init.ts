@@ -1,3 +1,4 @@
+
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL!);
@@ -97,8 +98,8 @@ export default async function handler(req: any, res: any) {
       status TEXT
     )`;
 
-    // Seed Data
-    const rows = await sql`SELECT count(*) FROM equipment`;
+    // Seed Data if Users empty
+    const rows = await sql`SELECT count(*) FROM users`;
     const count = parseInt(rows[0].count);
     
     if (count === 0) {
@@ -106,7 +107,9 @@ export default async function handler(req: any, res: any) {
         ('1', 'Administrator', 'admin@sss.com', 'Admin', 'https://picsum.photos/id/64/100/100', 'admin', 'active'),
         ('2', 'Fauzan Rizqy Kanz', 'fauzan.rizqy@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active'),
         ('3', 'Muhammad Luthfi Alfiyansyah', 'luthfialfiyansyah@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active'),
-        ('4', 'Rizqi Utomo', 'tomo@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active')
+        ('4', 'Rizqi Utomo', 'tomo@siglaboratory.co.id', 'Supporting', 'https://picsum.photos/id/65/100/100', 'supporting', 'active'),
+        ('5', 'Emily Chen', 'chemist@labnexus.com', 'Chemist', 'https://picsum.photos/id/66/100/100', '1234', 'active'),
+        ('6', 'Mike Ross', 'analyst@labnexus.com', 'Analyst', 'https://picsum.photos/id/67/100/100', '1234', 'active')
         ON CONFLICT (id) DO NOTHING`;
 
       await sql`INSERT INTO settings (id, values) VALUES ('categories', '["HPLC", "LC-MS", "GC-MS", "Spectrophotometer", "pH Meter", "Centrifuge", "Analytical Balance", "Fume Hood", "Micropipette", "Ultrasonic"]')

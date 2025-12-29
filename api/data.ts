@@ -1,3 +1,4 @@
+
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL!);
@@ -87,7 +88,7 @@ export default async function handler(req: any, res: any) {
         if (bulk) {
            for (const item of body) {
              await sql`INSERT INTO equipment (id, category, brand, model, serial_number, installation_date, status, division, location, calibration_point, pic, image, cal_cert, ver_cert) 
-                      VALUES (${item.id}, ${item.category}, ${item.brand}, ${item.model}, ${item.serial_number}, ${item.installation_date}, ${item.status}, ${item.division}, ${item.location}, ${item.calibration_point}, ${item.pic}, ${item.image}, ${item.cal_cert}, ${item.ver_cert})
+                      VALUES (${item.id}, ${item.category}, ${item.brand}, ${item.model}, ${item.serialNumber}, ${item.installationDate}, ${item.status}, ${item.division}, ${item.location}, ${item.calibrationMeasuringPoint}, ${item.personInCharge}, ${item.image}, ${item.calibrationCert}, ${item.verificationCert})
                       ON CONFLICT (id) DO UPDATE SET 
                       category = EXCLUDED.category, brand = EXCLUDED.brand, model = EXCLUDED.model, serial_number = EXCLUDED.serial_number, installation_date = EXCLUDED.installation_date, status = EXCLUDED.status, division = EXCLUDED.division, location = EXCLUDED.location, calibration_point = EXCLUDED.calibration_point, pic = EXCLUDED.pic, image = EXCLUDED.image, cal_cert = EXCLUDED.cal_cert, ver_cert = EXCLUDED.ver_cert`;
            }
@@ -101,12 +102,6 @@ export default async function handler(req: any, res: any) {
       if (table === 'settings') {
         await sql`INSERT INTO settings (id, values) VALUES (${body.id}, ${JSON.stringify(body.values)})
                  ON CONFLICT (id) DO UPDATE SET values = EXCLUDED.values`;
-        return res.status(200).json({ data: { success: true } });
-      }
-      if (table === 'notifications' && bulk) {
-        for (const note of body) {
-          await sql`UPDATE notifications SET is_read = ${note.isRead} WHERE id = ${note.id}`;
-        }
         return res.status(200).json({ data: { success: true } });
       }
       if (table === 'job_requests') {
@@ -127,11 +122,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'PATCH') {
       const body = getParsedBody();
       if (table === 'users') {
-        if (body.password) {
-          await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar}, password = ${body.password}, status = ${body.status || 'active'} WHERE id = ${id}`;
-        } else {
-          await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar}, status = ${body.status || 'active'} WHERE id = ${id}`;
-        }
+        await sql`UPDATE users SET name = ${body.name}, email = ${body.email}, role = ${body.role}, avatar = ${body.avatar}, status = ${body.status || 'active'} WHERE id = ${id}`;
         return res.status(200).json({ data: { success: true } });
       }
       if (table === 'notifications') {
