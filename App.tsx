@@ -89,7 +89,7 @@ const App: React.FC = () => {
       await db.auditLogs.add({
         action, targetId, targetName,
         userId: currentUser.id, userName: currentUser.name,
-        timestamp: new Date().toISOString(), details
+        timestamp: new Date().toISOString(), details: details || `${action} action performed on ${targetName}`
       });
 
       let title = ''; let message = ''; let type: 'create' | 'update' | 'delete' | 'system' = 'system';
@@ -131,10 +131,20 @@ const App: React.FC = () => {
     try {
       if (modalMode === 'edit' && editingItem) {
         await db.equipment.put(data);
-        await logAction('UPDATE', data.id, `${data.brand} ${data.model}`);
+        await logAction(
+          'UPDATE', 
+          data.id, 
+          `${data.brand} ${data.model}`, 
+          `Asset modified. Status: ${data.status}, Division: ${data.division}, PIC: ${data.personInCharge || 'Unassigned'}`
+        );
       } else {
         await db.equipment.add(data);
-        await logAction('CREATE', data.id, `${data.brand} ${data.model}`);
+        await logAction(
+          'CREATE', 
+          data.id, 
+          `${data.brand} ${data.model}`, 
+          `New ${data.category} asset registered in division ${data.division}.`
+        );
       }
       await refreshData();
     } catch (error) { alert("Error saving data. ID might already exist."); }
@@ -144,7 +154,14 @@ const App: React.FC = () => {
     if (itemToDelete) {
       const item = equipmentList.find(e => e.id === itemToDelete);
       await db.equipment.delete(itemToDelete);
-      if (item) await logAction('DELETE', item.id, `${item.brand} ${item.model}`);
+      if (item) {
+        await logAction(
+          'DELETE', 
+          item.id, 
+          `${item.brand} ${item.model}`, 
+          `Asset permanently removed from the laboratory inventory.`
+        );
+      }
       await refreshData();
       setItemToDelete(null);
     }
@@ -152,6 +169,7 @@ const App: React.FC = () => {
 
   const executeResetDatabase = async () => {
     await db.reset();
+    await logAction('RESET', 'DATABASE', 'Full Database Reset', 'All Postgres tables were cleared and re-seeded with factory defaults.');
     await refreshData();
     setIsResetModalOpen(false);
   };
