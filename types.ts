@@ -140,4 +140,5 @@ export interface JobRequest {
   dueDate: string;
   assignedToId: string;
   status: JobRequestStatus;
+  completionComment?: string;
 }

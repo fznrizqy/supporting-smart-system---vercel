@@ -95,7 +95,8 @@ export default async function handler(req: any, res: any) {
       start_date TEXT,
       due_date TEXT,
       assigned_to_id TEXT,
-      status TEXT
+      status TEXT,
+      completion_comment TEXT
     )`;
 
     // Seed Data if Users empty

@@ -76,8 +76,8 @@ export default async function handler(req: any, res: any) {
         return res.status(201).json({ data: { success: true } });
       }
       if (table === 'job_requests') {
-        const rows = await sql`INSERT INTO job_requests (title, requestor_id, requestor_name, division, description, category, requested_at, start_date, due_date, assigned_to_id, status)
-                 VALUES (${body.title}, ${body.requestorId}, ${body.requestorName}, ${body.division}, ${body.description}, ${body.category}, ${body.requestedAt}, ${body.startDate}, ${body.dueDate}, ${body.assignedToId}, ${body.status}) RETURNING id`;
+        const rows = await sql`INSERT INTO job_requests (title, requestor_id, requestor_name, division, description, category, requested_at, start_date, due_date, assigned_to_id, status, completion_comment)
+                 VALUES (${body.title}, ${body.requestorId}, ${body.requestorName}, ${body.division}, ${body.description}, ${body.category}, ${body.requestedAt}, ${body.startDate}, ${body.dueDate}, ${body.assignedToId}, ${body.status}, ${body.completionComment}) RETURNING id`;
         return res.status(201).json({ data: { id: rows[0].id } });
       }
     }
@@ -113,7 +113,8 @@ export default async function handler(req: any, res: any) {
             start_date = ${body.startDate}, 
             due_date = ${body.dueDate}, 
             assigned_to_id = ${body.assignedToId}, 
-            status = ${body.status}
+            status = ${body.status},
+            completion_comment = ${body.completionComment}
             WHERE id = ${body.id}`;
         return res.status(200).json({ data: { success: true } });
       }
@@ -130,7 +131,11 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ data: { success: true } });
       }
       if (table === 'job_requests') {
-        await sql`UPDATE job_requests SET status = ${body.status} WHERE id = ${id}`;
+        if (body.completionComment !== undefined) {
+           await sql`UPDATE job_requests SET status = ${body.status}, completion_comment = ${body.completionComment} WHERE id = ${id}`;
+        } else {
+           await sql`UPDATE job_requests SET status = ${body.status} WHERE id = ${id}`;
+        }
         return res.status(200).json({ data: { success: true } });
       }
     }
@@ -220,6 +225,7 @@ function mapJobRequest(row: any) {
     startDate: row.start_date,
     dueDate: row.due_date,
     assignedToId: row.assigned_to_id,
-    status: row.status
+    status: row.status,
+    completionComment: row.completion_comment
   };
 }

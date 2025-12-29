@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, User as UserIcon, Building2, ClipboardList, Info, Trash2, Check, AlertCircle } from 'lucide-react';
+import { X, Calendar, User as UserIcon, Building2, ClipboardList, Info, Trash2, Check, AlertCircle, MessageSquare } from 'lucide-react';
 import { JobRequest, JobRequestStatus, JobCategory, User, UserRole, Division } from '../types';
 import { db } from '../db';
 import ConfirmationModal from './ConfirmationModal';
@@ -37,7 +37,8 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         assignedToId: '',
         status: JobRequestStatus.Requests,
-        category: JobCategory.Maintenance
+        category: JobCategory.Maintenance,
+        completionComment: ''
       });
     }
   }, [initialData, isOpen, currentUser]);
@@ -46,10 +47,20 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validations
     if (!formData.title || !formData.description || !formData.assignedToId) {
       alert("Please fill in required fields: Title, Description, and Assigned To.");
       return;
     }
+
+    // Validation for Finished/Rejected status
+    const needsComment = formData.status === JobRequestStatus.Finished || formData.status === JobRequestStatus.Rejected;
+    if (needsComment && (!formData.completionComment || formData.completionComment.trim() === '')) {
+      alert(`Please provide a mandatory ${formData.status === JobRequestStatus.Finished ? 'completion' : 'rejection'} comment.`);
+      return;
+    }
+
     onSave(formData as JobRequest);
   };
 
@@ -64,6 +75,9 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
   const supportingUsers = users.filter(u => u.role === UserRole.Supporting || u.role === UserRole.Admin);
   const isRequestor = initialData?.requestorId === currentUser.id;
   const canEditMainFields = !initialData || isRequestor || isSupporting;
+
+  // Define if the comment section should be visible
+  const showCommentSection = formData.status === JobRequestStatus.Finished || formData.status === JobRequestStatus.Rejected;
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -105,6 +119,27 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none resize-none"
                 />
               </div>
+
+              {/* Conditional Comment Section for Finished/Rejected */}
+              {showCommentSection && isSupporting && (
+                <div className="animate-in slide-in-from-top-2 border-t pt-4 border-slate-100 dark:border-slate-700">
+                  <label className="flex items-center gap-2 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-2">
+                    <MessageSquare size={14} />
+                    {formData.status === JobRequestStatus.Finished ? 'Completion Comment' : 'Rejection Reason'} (Required)
+                  </label>
+                  <textarea 
+                    rows={3}
+                    value={formData.completionComment || ''} 
+                    onChange={e => setFormData({...formData, completionComment: e.target.value})}
+                    placeholder={`Provide a reason for ${formData.status?.toLowerCase()} the request...`}
+                    required
+                    className="w-full bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800 rounded-lg p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none resize-none ring-1 ring-sky-100 dark:ring-sky-900/30"
+                  />
+                  <p className="text-[10px] text-sky-500 mt-1 flex items-center gap-1 italic">
+                    <AlertCircle size={10} /> This comment is mandatory to move the card to the {formData.status} list.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Column 1 */}
@@ -190,10 +225,16 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                       <button 
                         key={s}
                         type="button"
-                        onClick={() => setFormData({...formData, status: s})}
+                        onClick={() => {
+                          setFormData({...formData, status: s});
+                          // Reset comment if switching away from Finished/Rejected
+                          if (s !== JobRequestStatus.Finished && s !== JobRequestStatus.Rejected) {
+                            setFormData(prev => ({ ...prev, status: s, completionComment: '' }));
+                          }
+                        }}
                         className={`px-3 py-1.5 rounded text-[10px] font-bold border transition-all ${
                           formData.status === s 
-                            ? 'bg-sky-500 text-white border-sky-600' 
+                            ? (s === JobRequestStatus.Rejected ? 'bg-red-500 text-white border-red-600' : 'bg-sky-500 text-white border-sky-600')
                             : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-sky-500'
                         }`}
                       >
