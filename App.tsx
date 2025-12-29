@@ -19,8 +19,8 @@ import { db } from './db';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]);
-  const [theme, setTheme] = useState<Theme>('light');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('lab_theme') as Theme) || 'light');
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [userList, setUserList] = useState<User[]>([]);
@@ -41,13 +41,16 @@ const App: React.FC = () => {
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+    localStorage.setItem('lab_theme', theme);
   }, [theme]);
 
   const refreshData = async () => {
     try {
-      const items = await db.equipment.toArray();
-      const catSettings = await db.settings.get('categories');
-      const users = await db.users.toArray();
+      const [items, catSettings, users] = await Promise.all([
+        db.equipment.toArray(),
+        db.settings.get('categories'),
+        db.users.toArray()
+      ]);
       setEquipmentList(items);
       setCategories(catSettings ? catSettings.values : Object.values(Category));
       setUserList(users);
@@ -57,21 +60,31 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const loadData = async () => {
+    const initApp = async () => {
       setIsLoadingData(true);
       try {
         await db.init();
+        
+        // Restore Session
+        const savedUser = localStorage.getItem('lab_session_user');
+        if (savedUser) {
+          const user = JSON.parse(savedUser);
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        }
+
         await refreshData();
       } catch (error) {
-        console.error("Failed to load database:", error);
+        console.error("Failed to initialize app:", error);
       } finally {
         setIsLoadingData(false);
       }
     };
-    loadData();
+    initApp();
   }, []);
 
   const logAction = async (action: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESET' | 'IMPORT', targetId: string, targetName: string, details?: string) => {
+    if (!currentUser) return;
     try {
       await db.auditLogs.add({
         action, targetId, targetName,
@@ -91,8 +104,19 @@ const App: React.FC = () => {
     } catch (error) { console.error("Failed to log action:", error); }
   };
 
-  const handleLogin = (user: User) => { setIsAuthenticated(true); setCurrentUser(user); };
-  const handleLogout = () => { setIsAuthenticated(false); setActiveTab('dashboard'); };
+  const handleLogin = (user: User) => { 
+    setIsAuthenticated(true); 
+    setCurrentUser(user);
+    localStorage.setItem('lab_session_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => { 
+    setIsAuthenticated(false); 
+    setCurrentUser(null);
+    localStorage.removeItem('lab_session_user');
+    setActiveTab('dashboard'); 
+  };
+
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const handleAddCategory = async (newCat: string) => {
@@ -133,7 +157,7 @@ const App: React.FC = () => {
   };
 
   if (!isAuthenticated) return <LoginPage onLogin={handleLogin} theme={theme} toggleTheme={toggleTheme} />;
-  if (isLoadingData) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (isLoadingData || !currentUser) return <div className="h-screen w-full flex items-center justify-center bg-brand-50 dark:bg-slate-950"><Loader2 className="animate-spin text-sky-500" /></div>;
 
   return (
     <HashRouter>
@@ -142,7 +166,7 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <TopBar currentUser={currentUser} theme={theme} toggleTheme={toggleTheme} onLogout={handleLogout} />
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 scroll-smooth relative">
-            <button onClick={() => setIsAIOpen(!isAIOpen)} className="fixed bottom-6 right-6 z-30 bg-sky-500 text-white p-3 rounded-full shadow-lg"><Sparkles /></button>
+            <button onClick={() => setIsAIOpen(!isAIOpen)} className="fixed bottom-6 right-6 z-30 bg-sky-500 text-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"><Sparkles /></button>
             <div className="max-w-7xl mx-auto space-y-6">
               {activeTab === 'dashboard' && <DashboardStats equipment={equipmentList} currentUser={currentUser} />}
               {activeTab === 'schedule' && <ScheduleCalendar equipmentList={equipmentList} currentUser={currentUser} users={userList} onLogAction={logAction} />}
@@ -150,10 +174,14 @@ const App: React.FC = () => {
               {activeTab === 'audit' && <AuditLogViewer />}
               {activeTab === 'admin' && (
                 <div className="space-y-6">
-                  <UserManagement currentUser={currentUser} />
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-lg font-bold mb-4">Vercel Postgres Control</h3>
-                    <button onClick={() => setIsResetModalOpen(true)} className="px-4 py-2 bg-red-500 text-white rounded-lg">Reset Database</button>
+                  <UserManagement currentUser={currentUser} onUserListUpdate={refreshData} />
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                       <Database size={20} className="text-red-500" /> 
+                       System Controls
+                    </h3>
+                    <p className="text-sm text-slate-500 mb-6">These actions are destructive and will reset the entire Postgres database to its initial state.</p>
+                    <button onClick={() => setIsResetModalOpen(true)} className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold transition-colors">Reset Global Database</button>
                   </div>
                 </div>
               )}
