@@ -12,9 +12,9 @@ import UserManagement from './components/UserManagement';
 import AuditLogViewer from './components/AuditLogViewer';
 import ScheduleCalendar from './components/ScheduleCalendar';
 import AssetLabelModal from './components/AssetLabelModal';
+import JobRequestBoard from './components/JobRequestBoard';
 import { Equipment, User, UserRole, Theme, EquipmentStatus, Category, Division } from './types';
-import { MOCK_USERS } from './constants';
-import { Sparkles, Database, RefreshCw, AlertTriangle, Upload, Download, HardDrive, Loader2, Save } from 'lucide-react';
+import { Sparkles, Database, Loader2 } from 'lucide-react';
 import { db } from './db';
 
 const App: React.FC = () => {
@@ -36,7 +36,6 @@ const App: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
@@ -169,8 +168,6 @@ const App: React.FC = () => {
 
   const executeResetDatabase = async () => {
     await db.reset();
-    await logAction('RESET', 'DATABASE', 'Full Database Reset', 'All Postgres tables were cleared and re-seeded with factory defaults.');
-    await refreshData();
     setIsResetModalOpen(false);
   };
 
@@ -188,6 +185,7 @@ const App: React.FC = () => {
             <div className="max-w-7xl mx-auto space-y-6">
               {activeTab === 'dashboard' && <DashboardStats equipment={equipmentList} currentUser={currentUser} />}
               {activeTab === 'schedule' && <ScheduleCalendar equipmentList={equipmentList} currentUser={currentUser} users={userList} onLogAction={logAction} />}
+              {activeTab === 'job-request' && <JobRequestBoard currentUser={currentUser} users={userList} />}
               {activeTab === 'equipment' && <EquipmentTable equipment={equipmentList} onEdit={(i) => { setEditingItem(i); setModalMode('edit'); setIsModalOpen(true); }} onView={(i) => { setEditingItem(i); setModalMode('view'); setIsModalOpen(true); }} onDelete={(id) => { setItemToDelete(id); setIsDeleteModalOpen(true); }} onAdd={() => { setEditingItem(null); setModalMode('create'); setIsModalOpen(true); }} onGenerateQR={(i) => { setQrItem(i); setIsQRModalOpen(true); }} userRole={currentUser.role} categories={categories} />}
               {activeTab === 'audit' && <AuditLogViewer />}
               {activeTab === 'admin' && (

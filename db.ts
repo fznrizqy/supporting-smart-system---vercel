@@ -1,226 +1,151 @@
+import { Dexie, type Table } from 'dexie';
+import { 
+  Equipment, User, AuditLog, Notification, 
+  CalendarEvent, JobRequest, UserRole, 
+  Category, Division, EquipmentStatus, 
+  JobRequestStatus, JobCategory 
+} from './types';
+import { INITIAL_EQUIPMENT, MOCK_USERS } from './constants';
 
-import { Equipment, User, AuditLog, Notification, CalendarEvent, JobRequest } from './types';
+class LabDatabase extends Dexie {
+  equipment!: Table<Equipment>;
+  users!: Table<User>;
+  auditLogs!: Table<AuditLog>;
+  notifications!: Table<Notification>;
+  events!: Table<CalendarEvent>;
+  jobRequests!: Table<JobRequest>;
+  settings!: Table<{ id: string; values: any }>;
 
-// Utility for handling fetch responses safely
-const handleResponse = async (res: Response) => {
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API Error ${res.status}: ${text}`);
+  constructor() {
+    super('LabNexusDB');
+    this.version(2).stores({
+      equipment: 'id, category, status, division, personInCharge',
+      users: 'id, name, email, role',
+      auditLogs: '++id, action, targetId, userId, timestamp',
+      notifications: '++id, timestamp, isRead, type',
+      events: '++id, startDate, type, equipmentId, createdBy',
+      jobRequests: '++id, requestorId, assignedToId, status, category',
+      settings: 'id'
+    });
   }
-  const json = await res.json();
-  // We now expect wrapped responses to avoid JSON primitive parsing issues
-  return json.data !== undefined ? json.data : json;
-};
+}
 
-// Frontend API Client to communicate with Vercel Serverless Functions
+const localDb = new LabDatabase();
+
 export const db = {
-  // Initialization
   init: async () => {
-    const res = await fetch('/api/init');
-    return handleResponse(res);
+    // Check if we need to seed
+    const userCount = await localDb.users.count();
+    if (userCount === 0) {
+      // 1. Seed Users
+      await localDb.users.bulkAdd(MOCK_USERS);
+
+      // 2. Seed Equipment
+      await localDb.equipment.bulkAdd(INITIAL_EQUIPMENT);
+
+      // 3. Seed Settings (Categories)
+      await localDb.settings.add({
+        id: 'categories',
+        values: Object.values(Category)
+      });
+
+      // 4. Seed Initial Job Requests (To ensure the board isn't empty)
+      await localDb.jobRequests.bulkAdd([
+        {
+          title: 'Maintenance HPLC AP-1367',
+          requestorId: '5', // Emily Chen (Chemist)
+          requestorName: 'Emily Chen',
+          division: Division.MS,
+          description: 'Routine maintenance and seal check for HPLC pump.',
+          category: JobCategory.Maintenance,
+          requestedAt: new Date(Date.now() - 86400000).toISOString(),
+          startDate: new Date().toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+          assignedToId: '2', // Fauzan Rizqy Kanz (Supporting)
+          status: JobRequestStatus.Requests
+        },
+        {
+          title: 'Troubleshooting IN-0188',
+          requestorId: '6', // Mike Ross (Analyst)
+          requestorName: 'Mike Ross',
+          division: Division.HPLC,
+          description: 'Baseline instability on the detector. Requires immediate check.',
+          category: JobCategory.Troubleshooting,
+          requestedAt: new Date().toISOString(),
+          startDate: new Date().toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          assignedToId: '3', // Muhammad Luthfi (Supporting)
+          status: JobRequestStatus.OnProgress
+        }
+      ]);
+
+      // 5. Initial Audit Log
+      await localDb.auditLogs.add({
+        action: 'CREATE',
+        targetId: 'SYSTEM',
+        targetName: 'Database Initialization',
+        userId: '1',
+        userName: 'Administrator',
+        timestamp: new Date().toISOString(),
+        details: 'System database initialized with mock corporate data.'
+      });
+    }
+    return { success: true };
   },
 
-  // Equipment
   equipment: {
-    toArray: async () => {
-      const res = await fetch('/api/data?table=equipment');
-      return handleResponse(res);
-    },
-    add: async (item: Equipment) => {
-      const res = await fetch('/api/data?table=equipment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item)
-      });
-      return handleResponse(res);
-    },
-    put: async (item: Equipment) => {
-      const res = await fetch('/api/data?table=equipment', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item)
-      });
-      return handleResponse(res);
-    },
-    delete: async (id: string) => {
-      const res = await fetch(`/api/data?table=equipment&id=${encodeURIComponent(id)}`, {
-        method: 'DELETE'
-      });
-      return handleResponse(res);
-    },
-    bulkPut: async (items: Equipment[]) => {
-      const res = await fetch('/api/data?table=equipment&bulk=true', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(items)
-      });
-      return handleResponse(res);
-    }
+    toArray: () => localDb.equipment.toArray(),
+    add: (item: Equipment) => localDb.equipment.add(item),
+    put: (item: Equipment) => localDb.equipment.put(item),
+    delete: (id: string) => localDb.equipment.delete(id),
+    bulkPut: (items: Equipment[]) => localDb.equipment.bulkPut(items)
   },
 
-  // Users
   users: {
-    toArray: async () => {
-      const res = await fetch('/api/data?table=users');
-      return handleResponse(res);
-    },
-    add: async (user: User) => {
-      const res = await fetch('/api/data?table=users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(user)
-      });
-      return handleResponse(res);
-    },
-    update: async (id: string, updates: Partial<User>) => {
-      const res = await fetch(`/api/data?table=users&id=${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
-      return handleResponse(res);
-    },
-    delete: async (id: string) => {
-      const res = await fetch(`/api/data?table=users&id=${encodeURIComponent(id)}`, {
-        method: 'DELETE'
-      });
-      return handleResponse(res);
-    }
+    toArray: () => localDb.users.toArray(),
+    add: (user: User) => localDb.users.add(user),
+    update: (id: string, updates: Partial<User>) => localDb.users.update(id, updates),
+    delete: (id: string) => localDb.users.delete(id)
   },
 
-  // Audit Logs
   auditLogs: {
     toArray: async (limit = 100) => {
-      const res = await fetch(`/api/data?table=audit_logs&limit=${limit}`);
-      return handleResponse(res);
+      return localDb.auditLogs.orderBy('timestamp').reverse().limit(limit).toArray();
     },
-    add: async (log: AuditLog) => {
-      const res = await fetch('/api/data?table=audit_logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(log)
-      });
-      return handleResponse(res);
-    }
+    add: (log: AuditLog) => localDb.auditLogs.add(log)
   },
 
-  // Notifications
   notifications: {
     toArray: async (limit = 20) => {
-      const res = await fetch(`/api/data?table=notifications&limit=${limit}`);
-      return handleResponse(res);
+      return localDb.notifications.orderBy('timestamp').reverse().limit(limit).toArray();
     },
-    add: async (note: Notification) => {
-      const res = await fetch('/api/data?table=notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(note)
-      });
-      return handleResponse(res);
-    },
-    update: async (id: number, updates: Partial<Notification>) => {
-      const res = await fetch(`/api/data?table=notifications&id=${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
-      return handleResponse(res);
-    },
-    bulkPut: async (notes: Notification[]) => {
-      const res = await fetch('/api/data?table=notifications&bulk=true', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(notes)
-      });
-      return handleResponse(res);
-    },
-    delete: async (id: number) => {
-      const res = await fetch(`/api/data?table=notifications&id=${id}`, {
-        method: 'DELETE'
-      });
-      return handleResponse(res);
-    }
+    add: (note: Notification) => localDb.notifications.add(note),
+    update: (id: number, updates: Partial<Notification>) => localDb.notifications.update(id, updates),
+    bulkPut: (notes: Notification[]) => localDb.notifications.bulkPut(notes),
+    delete: (id: number) => localDb.notifications.delete(id)
   },
 
-  // Events
   events: {
-    toArray: async () => {
-      const res = await fetch('/api/data?table=events');
-      return handleResponse(res);
-    },
-    add: async (event: CalendarEvent) => {
-      const res = await fetch('/api/data?table=events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event)
-      });
-      return handleResponse(res);
-    },
-    delete: async (id: number) => {
-      const res = await fetch(`/api/data?table=events&id=${id}`, {
-        method: 'DELETE'
-      });
-      return handleResponse(res);
-    }
+    toArray: () => localDb.events.toArray(),
+    add: (event: CalendarEvent) => localDb.events.add(event),
+    delete: (id: number) => localDb.events.delete(id)
   },
 
-  // Job Requests
   jobRequests: {
-    toArray: async () => {
-      const res = await fetch('/api/data?table=job_requests');
-      return handleResponse(res);
-    },
-    add: async (req: JobRequest) => {
-      const res = await fetch('/api/data?table=job_requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req)
-      });
-      return handleResponse(res);
-    },
-    put: async (req: JobRequest) => {
-      const res = await fetch('/api/data?table=job_requests', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req)
-      });
-      return handleResponse(res);
-    },
-    updateStatus: async (id: number, status: string) => {
-      const res = await fetch(`/api/data?table=job_requests&id=${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      return handleResponse(res);
-    },
-    delete: async (id: number) => {
-      const res = await fetch(`/api/data?table=job_requests&id=${id}`, {
-        method: 'DELETE'
-      });
-      return handleResponse(res);
-    }
+    toArray: () => localDb.jobRequests.toArray(),
+    add: (req: JobRequest) => localDb.jobRequests.add(req),
+    put: (req: JobRequest) => localDb.jobRequests.put(req),
+    updateStatus: (id: number, status: string) => localDb.jobRequests.update(id, { status: status as any }),
+    delete: (id: number) => localDb.jobRequests.delete(id)
   },
 
-  // Settings
   settings: {
-    get: async (id: string) => {
-      const res = await fetch(`/api/data?table=settings&id=${id}`);
-      return handleResponse(res);
-    },
-    put: async (setting: { id: string, values: string[] }) => {
-      const res = await fetch('/api/data?table=settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(setting)
-      });
-      return handleResponse(res);
-    }
+    get: (id: string) => localDb.settings.get(id),
+    put: (setting: { id: string, values: any }) => localDb.settings.put(setting)
   },
 
-  // Global reset helper
   reset: async () => {
-    const res = await fetch('/api/init?reset=true', { method: 'POST' });
-    return handleResponse(res);
+    await localDb.delete();
+    window.location.reload();
   }
 };
