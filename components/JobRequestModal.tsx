@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, User as UserIcon, Building2, ClipboardList, Info, Trash2, Check, AlertCircle, MessageSquare } from 'lucide-react';
+import { X, Calendar, User as UserIcon, Building2, ClipboardList, Info, Trash2, Check, AlertCircle, MessageSquare, Shield } from 'lucide-react';
 import { JobRequest, JobRequestStatus, JobCategory, User, UserRole, Division } from '../types';
 import { db } from '../db';
 import ConfirmationModal from './ConfirmationModal';
@@ -68,15 +68,22 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
     if (initialData?.id) {
       await db.jobRequests.delete(initialData.id);
       onClose();
-      window.location.reload(); // Quick refresh
+      // Use window.location.reload() for quick sync or refresh the board in JobRequestBoard if we had a prop for it
+      window.location.reload(); 
     }
   };
 
   const supportingUsers = users.filter(u => u.role === UserRole.Supporting || u.role === UserRole.Admin);
   const isRequestor = initialData?.requestorId === currentUser.id;
-  const canEditMainFields = !initialData || isRequestor || isSupporting;
-
-  // Define if the comment section should be visible
+  const isAdmin = currentUser.role === UserRole.Admin;
+  
+  // Logic: 
+  // 1. If new request: Can edit everything.
+  // 2. If existing: 
+  //    - Requestor or Admin can edit core fields.
+  //    - Supporting (if not requestor) can only edit Category and Status/Comment.
+  const canEditCoreFields = !initialData || isRequestor || isAdmin;
+  const canEditSupportFields = isSupporting || isAdmin;
   const showCommentSection = formData.status === JobRequestStatus.Finished || formData.status === JobRequestStatus.Rejected;
 
   return createPortal(
@@ -87,6 +94,11 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
            <h3 className="text-lg font-bold flex items-center gap-2">
              <ClipboardList className="text-sky-500" />
              {initialData ? 'Job Request Detail' : 'New Job Request'}
+             {initialData && !canEditCoreFields && isSupporting && (
+               <span className="ml-2 text-[10px] bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                 <Shield size={10} /> Supporting Edit Mode
+               </span>
+             )}
            </h3>
            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={24}/></button>
         </div>
@@ -102,9 +114,9 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                   type="text" 
                   value={formData.title} 
                   onChange={e => setFormData({...formData, title: e.target.value})}
-                  disabled={!canEditMainFields}
+                  disabled={!canEditCoreFields}
                   placeholder="e.g. Maintenance HPLC AP-1367"
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none ${!canEditCoreFields ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}`}
                 />
               </div>
 
@@ -114,14 +126,14 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                   rows={4}
                   value={formData.description} 
                   onChange={e => setFormData({...formData, description: e.target.value})}
-                  disabled={!canEditMainFields}
+                  disabled={!canEditCoreFields}
                   placeholder="Provide details about the requested work..."
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none resize-none"
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none resize-none ${!canEditCoreFields ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}`}
                 />
               </div>
 
               {/* Conditional Comment Section for Finished/Rejected */}
-              {showCommentSection && isSupporting && (
+              {showCommentSection && canEditSupportFields && (
                 <div className="animate-in slide-in-from-top-2 border-t pt-4 border-slate-100 dark:border-slate-700">
                   <label className="flex items-center gap-2 text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-2">
                     <MessageSquare size={14} />
@@ -157,8 +169,8 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                 <select 
                   value={formData.division} 
                   onChange={e => setFormData({...formData, division: e.target.value})}
-                  disabled={!canEditMainFields}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none"
+                  disabled={!canEditCoreFields}
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none ${!canEditCoreFields ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   {Object.values(Division).map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -169,12 +181,12 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                 <select 
                   value={formData.category} 
                   onChange={e => setFormData({...formData, category: e.target.value as JobCategory})}
-                  disabled={!isSupporting}
-                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none ${!isSupporting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  disabled={!canEditSupportFields}
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none ${!canEditSupportFields ? 'opacity-70 cursor-not-allowed' : 'ring-1 ring-sky-200 dark:ring-sky-800'}`}
                 >
                   {Object.values(JobCategory).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                {!isSupporting && <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><Info size={10}/> To be determined by Supporting team</p>}
+                {!canEditSupportFields && <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><Info size={10}/> Only Supporting team can set category</p>}
               </div>
             </div>
 
@@ -187,8 +199,8 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                     type="date" 
                     value={formData.startDate} 
                     onChange={e => setFormData({...formData, startDate: e.target.value})}
-                    disabled={!canEditMainFields}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm outline-none [color-scheme:light] dark:[color-scheme:dark]"
+                    disabled={!canEditCoreFields}
+                    className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm outline-none [color-scheme:light] dark:[color-scheme:dark] ${!canEditCoreFields ? 'opacity-70 cursor-not-allowed' : ''}`}
                   />
                 </div>
                 <div>
@@ -197,8 +209,8 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                     type="date" 
                     value={formData.dueDate} 
                     onChange={e => setFormData({...formData, dueDate: e.target.value})}
-                    disabled={!canEditMainFields}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm outline-none [color-scheme:light] dark:[color-scheme:dark]"
+                    disabled={!canEditCoreFields}
+                    className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm outline-none [color-scheme:light] dark:[color-scheme:dark] ${!canEditCoreFields ? 'opacity-70 cursor-not-allowed' : ''}`}
                   />
                 </div>
               </div>
@@ -208,8 +220,8 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                 <select 
                   value={formData.assignedToId} 
                   onChange={e => setFormData({...formData, assignedToId: e.target.value})}
-                  disabled={!canEditMainFields}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none"
+                  disabled={!canEditCoreFields}
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none ${!canEditCoreFields ? 'opacity-70 cursor-not-allowed' : ''}`}
                   required
                 >
                   <option value="">Select Support Staff...</option>
@@ -217,9 +229,9 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                 </select>
               </div>
 
-              {initialData && isSupporting && (
+              {initialData && canEditSupportFields && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Current Status</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Update Status</label>
                   <div className="grid grid-cols-2 gap-2">
                     {Object.values(JobRequestStatus).map(s => (
                       <button 
@@ -244,13 +256,26 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
                   </div>
                 </div>
               )}
+              {initialData && !canEditSupportFields && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Current Status</label>
+                  <div className={`px-3 py-2 rounded-lg text-sm font-bold border ${
+                    formData.status === JobRequestStatus.Finished ? 'bg-green-50 border-green-200 text-green-700' :
+                    formData.status === JobRequestStatus.Rejected ? 'bg-red-50 border-red-200 text-red-700' :
+                    formData.status === JobRequestStatus.OnProgress ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                    'bg-yellow-50 border-yellow-200 text-yellow-700'
+                  }`}>
+                    {formData.status}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </form>
 
         <div className="p-6 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
           <div>
-            {initialData && (isSupporting || isRequestor) && (
+            {initialData && (isRequestor || isAdmin) && (
               <button 
                 type="button" 
                 onClick={() => setIsDeleteConfirmOpen(true)}
@@ -269,7 +294,7 @@ const JobRequestModal: React.FC<JobRequestModalProps> = ({
             >
               Cancel
             </button>
-            {(canEditMainFields || isSupporting) && (
+            {(canEditCoreFields || canEditSupportFields) && (
               <button 
                 type="submit" 
                 onClick={handleSubmit}

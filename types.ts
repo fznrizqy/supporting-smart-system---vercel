@@ -124,7 +124,8 @@ export enum JobRequestStatus {
 export enum JobCategory {
   Maintenance = 'Maintenance',
   Troubleshooting = 'Troubleshooting',
-  Documents = 'Documents'
+  Documents = 'Documents',
+  Others = 'Others'
 }
 
 export interface JobRequest {
