@@ -52,6 +52,11 @@ const JobRequestBoard: React.FC<JobRequestBoardProps> = ({ currentUser, users })
     setIsModalOpen(false);
   };
 
+  const moveRequest = async (id: number, status: JobRequestStatus) => {
+    await db.jobRequests.updateStatus(id, status);
+    await fetchRequests();
+  };
+
   const columns = [
     { title: 'Requests', status: JobRequestStatus.Requests, color: 'bg-yellow-500' },
     { title: 'On Progress', status: JobRequestStatus.OnProgress, color: 'bg-blue-500' },
@@ -61,14 +66,6 @@ const JobRequestBoard: React.FC<JobRequestBoardProps> = ({ currentUser, users })
 
   const canCreate = [UserRole.Admin, UserRole.Chemist, UserRole.Manager, UserRole.Supervisor].includes(currentUser.role);
   const isSupporting = [UserRole.Admin, UserRole.Supporting].includes(currentUser.role);
-
-  if (loading && requests.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="animate-spin text-sky-500" size={32} />
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -104,7 +101,7 @@ const JobRequestBoard: React.FC<JobRequestBoardProps> = ({ currentUser, users })
                   <div 
                     key={req.id} 
                     onClick={() => handleEditRequest(req)}
-                    className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:border-sky-500 dark:hover:border-sky-500 transition-all cursor-pointer group animate-in fade-in"
+                    className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:border-sky-500 dark:hover:border-sky-500 transition-all cursor-pointer group"
                   >
                     <div className={`w-8 h-1 rounded-full mb-3 ${
                       req.category === JobCategory.Maintenance ? 'bg-yellow-400' : 
